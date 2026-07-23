@@ -17,6 +17,7 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 px-4 py-10 font-sans dark:bg-black">
       <ProfileUpdateForm
+        showHomeNavigation
         initialProfile={{
           fullName: "Jane Doe",
           email: "jane@example.com",

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useId, useRef, useState, type FormEvent } from "react";
 
 const EMAIL_REGEX =
@@ -34,6 +35,7 @@ type ProfileUpdateFormProps = {
     avatarUrl?: string;
   };
   onSubmit?: (profile: UserProfile) => Promise<void> | void;
+  showHomeNavigation?: boolean;
 };
 
 const defaultValues: FormValues = {
@@ -184,6 +186,7 @@ function LoadingSpinner() {
 export function ProfileUpdateForm({
   initialProfile,
   onSubmit,
+  showHomeNavigation = false,
 }: ProfileUpdateFormProps) {
   const formId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -334,13 +337,46 @@ export function ProfileUpdateForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="mx-auto w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-8"
-      aria-labelledby={`${formId}-title`}
-    >
-      <header className="mb-8">
+    <div className="mx-auto w-full max-w-2xl">
+      {showHomeNavigation ? (
+        <Link
+          href="/"
+          className="mb-3 inline-flex items-center text-sm text-zinc-500 transition hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+        >
+          ← Back to Home
+        </Link>
+      ) : null}
+
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="relative w-full rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-8"
+        aria-labelledby={`${formId}-title`}
+      >
+        {showHomeNavigation ? (
+          <Link
+            href="/"
+            aria-label="Close profile form and return home"
+            className="absolute top-4 right-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </Link>
+        ) : null}
+
+        <header className="mb-8 pr-10">
         <h2
           id={`${formId}-title`}
           className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50"
@@ -467,6 +503,7 @@ export function ProfileUpdateForm({
         </button>
       </div>
     </form>
+    </div>
   );
 }
 
