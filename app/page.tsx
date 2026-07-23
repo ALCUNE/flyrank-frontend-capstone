@@ -6,6 +6,7 @@ import { ProfileUpdateForm, type UserProfile } from "@/components/ProfileUpdateF
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/profile", label: "Profile Settings" },
+  { href: "/playground", label: "Playground" },
   { href: "/api/health", label: "Health Check", external: true },
 ];
 
