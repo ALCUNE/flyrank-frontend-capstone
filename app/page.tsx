@@ -7,6 +7,7 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/profile", label: "Profile Settings" },
   { href: "/playground", label: "Playground" },
+  { href: "/chat", label: "Chat" },
   { href: "/api/health", label: "Health Check", external: true },
 ];
 
