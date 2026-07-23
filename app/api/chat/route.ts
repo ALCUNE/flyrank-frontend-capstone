@@ -1,9 +1,9 @@
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import {
-  CHAT_SYSTEM_PROMPT,
-  chatModelConfig,
-  getAnthropicChatModel,
-} from "@/lib/ai-config";
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  type UIMessage,
+} from "ai";
+import { streamMockMarkdownResponse } from "@/lib/mock-chat-stream";
 
 export const runtime = "nodejs";
 
@@ -15,16 +15,17 @@ export async function POST(request: Request) {
       return Response.json({ error: "Messages array is required." }, { status: 400 });
     }
 
-    const result = streamText({
-      model: getAnthropicChatModel(),
-      system: CHAT_SYSTEM_PROMPT,
-      messages: await convertToModelMessages(body.messages),
-      maxOutputTokens: chatModelConfig.maxOutputTokens,
-      temperature: chatModelConfig.temperature,
-      abortSignal: request.signal,
+    const stream = createUIMessageStream({
+      originalMessages: body.messages,
+      execute: async ({ writer }) => {
+        await streamMockMarkdownResponse({
+          writer,
+          abortSignal: request.signal,
+        });
+      },
     });
 
-    return result.toUIMessageStreamResponse();
+    return createUIMessageStreamResponse({ stream });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to process chat request.";
