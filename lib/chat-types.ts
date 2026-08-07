@@ -26,6 +26,11 @@ export const suggestedPrompts: SuggestedPrompt[] = [
     message: "Run SEO audit for fail.example.com",
   },
   {
+    id: "mid-stream-error",
+    label: "Trigger mid-stream error",
+    message: "Trigger mid-stream error",
+  },
+  {
     id: "rsc",
     label: "Explain React Server Components",
     message: "Explain React Server Components in Next.js with one practical example.",
@@ -60,4 +65,10 @@ export function extractSiteAuditRequest(text: string): { url: string; forceError
   }
 
   return { url: hostname, forceError };
+}
+
+export function isMidStreamErrorTrigger(text: string): boolean {
+  return /trigger mid-stream error|simulate mid-stream failure|mid-stream error demo/i.test(
+    text.trim(),
+  );
 }

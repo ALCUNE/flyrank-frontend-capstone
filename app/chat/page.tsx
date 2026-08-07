@@ -3,14 +3,13 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
+import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
+import { ChatErrorCard } from "@/components/chat/ChatErrorCard";
+import { PromptChips } from "@/components/chat/PromptChips";
 import { SiteAuditToolPart } from "@/components/chat/SiteAuditToolPart";
-import {
-  getMessageText,
-  suggestedPrompts,
-  type ChatUIMessage,
-} from "@/lib/chat-types";
+import { getMessageText, type ChatUIMessage } from "@/lib/chat-types";
 
 const AUTO_SCROLL_THRESHOLD_PX = 80;
 
@@ -77,30 +76,6 @@ function MessageBubble({ message }: { message: ChatUIMessage }) {
   );
 }
 
-function PromptChips({
-  disabled,
-  onSelect,
-}: {
-  disabled: boolean;
-  onSelect: (message: string) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {suggestedPrompts.map((prompt) => (
-        <button
-          key={prompt.id}
-          type="button"
-          disabled={disabled}
-          onClick={() => onSelect(prompt.message)}
-          className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-300 hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-300 sm:text-sm"
-        >
-          {prompt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export default function ChatPage() {
   const [input, setInput] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -115,14 +90,15 @@ export default function ChatPage() {
     [],
   );
 
-  const { messages, sendMessage, stop, status, error } = useChat<ChatUIMessage>({
-    transport,
-  });
+  const { messages, sendMessage, stop, status, error, regenerate, clearError } =
+    useChat<ChatUIMessage>({
+      transport,
+    });
 
   const isGenerating = status === "submitted" || status === "streaming";
-  const showThinkingIndicator = status === "submitted";
+  const showThinkingIndicator = status === "submitted" && !error;
 
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) {
       return;
@@ -132,7 +108,7 @@ export default function ChatPage() {
       container.scrollHeight - container.scrollTop - container.clientHeight;
 
     shouldAutoScrollRef.current = distanceFromBottom <= AUTO_SCROLL_THRESHOLD_PX;
-  };
+  }, []);
 
   useEffect(() => {
     if (!shouldAutoScrollRef.current) {
@@ -140,12 +116,22 @@ export default function ChatPage() {
     }
 
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, status, showThinkingIndicator]);
+  }, [messages, status, showThinkingIndicator, error]);
+
+  const handleRetry = useCallback(() => {
+    clearError();
+    void regenerate();
+    shouldAutoScrollRef.current = true;
+  }, [clearError, regenerate]);
 
   const submitPrompt = (value: string) => {
     const trimmed = value.trim();
     if (!trimmed || isGenerating) {
       return;
+    }
+
+    if (error) {
+      clearError();
     }
 
     sendMessage({ text: trimmed });
@@ -159,14 +145,16 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex min-h-full flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-5 sm:px-6">
+    <div className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
+      <header className="shrink-0 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Streaming AI Chat</h1>
+              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                Streaming AI Chat
+              </h1>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                FE-07 — tool calling with streamed input, custom audit cards, and mock server tools.
+                FE-08 — error recovery, onboarding, and mobile-safe streaming layout.
               </p>
             </div>
             <Link
@@ -182,47 +170,33 @@ export default function ChatPage() {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="mx-auto flex w-full max-w-4xl flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-6"
+        className="mx-auto min-h-0 w-full max-w-4xl flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-6"
         role="log"
         aria-live="polite"
         aria-relevant="additions text"
         aria-label="Chat conversation"
       >
-        <div className="flex flex-1 flex-col gap-4">
+        <div className="flex min-h-full flex-col gap-4">
           {messages.length === 0 ? (
-            <div className="space-y-4 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-              <p>
-                Try a suggested prompt below to invoke the <code>getSiteAudit</code> server tool,
-                or ask a general frontend question for a markdown streaming response.
-              </p>
-              <PromptChips disabled={isGenerating} onSelect={submitPrompt} />
-            </div>
+            <ChatEmptyState disabled={isGenerating} onSelect={submitPrompt} />
           ) : (
             messages.map((message) => <MessageBubble key={message.id} message={message} />)
           )}
 
+          {error ? <ChatErrorCard error={error} onRetry={handleRetry} /> : null}
           {showThinkingIndicator ? <ThinkingIndicator /> : null}
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+      <footer className="shrink-0 border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
         <form
           onSubmit={handleSubmit}
-          className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-4 sm:px-6"
+          className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4"
           aria-label="Send a chat message"
         >
           {messages.length > 0 ? (
-            <PromptChips disabled={isGenerating} onSelect={submitPrompt} />
-          ) : null}
-
-          {error ? (
-            <p
-              role="alert"
-              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
-            >
-              {error.message}
-            </p>
+            <PromptChips disabled={isGenerating} onSelect={submitPrompt} grouped />
           ) : null}
 
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -236,7 +210,7 @@ export default function ChatPage() {
               rows={3}
               placeholder="Ask a question or run: Run SEO Audit for flyrank.ai"
               disabled={isGenerating}
-              className="min-h-[88px] flex-1 resize-y rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-900"
+              className="min-h-[80px] flex-1 resize-none rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-900 sm:min-h-[88px] sm:resize-y"
             />
 
             <div className="flex flex-row gap-2 sm:w-40 sm:flex-col">

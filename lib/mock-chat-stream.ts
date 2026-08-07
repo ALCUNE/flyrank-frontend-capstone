@@ -1,5 +1,5 @@
 import { generateId, type UIMessage, type UIMessageStreamWriter } from "ai";
-import { extractSiteAuditRequest, getMessageText } from "@/lib/chat-types";
+import { extractSiteAuditRequest, getMessageText, isMidStreamErrorTrigger } from "@/lib/chat-types";
 import {
   executeSiteAudit,
   getSiteAudit,
@@ -192,6 +192,31 @@ export async function streamMockSiteAuditTool({
   writer.write({ type: "finish", finishReason: "stop" });
 }
 
+export async function streamMockMidStreamError({
+  writer,
+  abortSignal,
+}: StreamOptions): Promise<void> {
+  const textId = generateId();
+  const partialContent =
+    "Streaming a detailed answer about **React**, **Next.js**, and **accessibility** best practices";
+
+  writer.write({ type: "start" });
+  writer.write({ type: "text-start", id: textId });
+
+  for (const chunk of splitIntoChunks(partialContent, 10)) {
+    await sleep(STREAM_CHUNK_DELAY_MS, abortSignal);
+    writer.write({ type: "text-delta", id: textId, delta: chunk });
+  }
+
+  await sleep(180, abortSignal);
+  writer.write({ type: "text-end", id: textId });
+  writer.write({
+    type: "error",
+    errorText:
+      "Simulated mid-stream failure: the response channel closed before completion.",
+  });
+}
+
 export async function streamMockMarkdownResponse({
   writer,
   abortSignal,
@@ -218,6 +243,12 @@ export async function streamMockChatResponse({
   messages,
 }: StreamMockChatOptions): Promise<void> {
   const latestPrompt = getLatestUserMessageText(messages);
+
+  if (isMidStreamErrorTrigger(latestPrompt)) {
+    await streamMockMidStreamError({ writer, abortSignal });
+    return;
+  }
+
   const auditRequest = extractSiteAuditRequest(latestPrompt);
 
   if (auditRequest) {
