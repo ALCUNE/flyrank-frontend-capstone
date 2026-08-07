@@ -1,26 +1,25 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import { DefaultChatTransport } from "ai";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
+import { SiteAuditToolPart } from "@/components/chat/SiteAuditToolPart";
+import {
+  getMessageText,
+  suggestedPrompts,
+  type ChatUIMessage,
+} from "@/lib/chat-types";
 
 const AUTO_SCROLL_THRESHOLD_PX = 80;
-
-function getMessageText(message: UIMessage): string {
-  return message.parts
-    .filter((part): part is Extract<UIMessage["parts"][number], { type: "text" }> => part.type === "text")
-    .map((part) => part.text)
-    .join("");
-}
 
 function ThinkingIndicator() {
   return (
     <div
       role="status"
       aria-live="polite"
-      className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+      className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm transition-all duration-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
     >
       <span className="flex gap-1" aria-hidden="true">
         <span className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.2s]" />
@@ -32,32 +31,73 @@ function ThinkingIndicator() {
   );
 }
 
-function MessageBubble({ message }: { message: UIMessage }) {
+function MarkdownBlock({ text }: { text: string }) {
+  return (
+    <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-pre:my-2 prose-pre:overflow-x-auto prose-code:rounded prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-slate-900 dark:prose-code:bg-slate-800 dark:prose-code:text-slate-100">
+      <ReactMarkdown>{text || " "}</ReactMarkdown>
+    </div>
+  );
+}
+
+function MessageBubble({ message }: { message: ChatUIMessage }) {
   const isUser = message.role === "user";
-  const text = getMessageText(message);
 
   return (
     <article
       className={
-        "max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-7 shadow-sm sm:max-w-[80%] " +
+        "max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-7 shadow-sm transition-all duration-300 sm:max-w-[85%] " +
         (isUser
           ? "ml-auto bg-blue-600 text-white"
           : "mr-auto border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100")
       }
       aria-label={isUser ? "Your message" : "Assistant message"}
     >
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-80">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide opacity-80">
         {isUser ? "You" : "Assistant"}
       </p>
 
       {isUser ? (
-        <p className="whitespace-pre-wrap">{text}</p>
+        <p className="whitespace-pre-wrap">{getMessageText(message)}</p>
       ) : (
-        <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-pre:my-2 prose-pre:overflow-x-auto prose-code:rounded prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-slate-900 dark:prose-code:bg-slate-800 dark:prose-code:text-slate-100">
-          <ReactMarkdown>{text || " "}</ReactMarkdown>
+        <div className="space-y-4">
+          {message.parts.map((part, index) => {
+            if (part.type === "text") {
+              return <MarkdownBlock key={`${message.id}-text-${index}`} text={part.text} />;
+            }
+
+            if (part.type === "tool-getSiteAudit") {
+              return <SiteAuditToolPart key={part.toolCallId} part={part} />;
+            }
+
+            return null;
+          })}
         </div>
       )}
     </article>
+  );
+}
+
+function PromptChips({
+  disabled,
+  onSelect,
+}: {
+  disabled: boolean;
+  onSelect: (message: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {suggestedPrompts.map((prompt) => (
+        <button
+          key={prompt.id}
+          type="button"
+          disabled={disabled}
+          onClick={() => onSelect(prompt.message)}
+          className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-blue-300 hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-300 sm:text-sm"
+        >
+          {prompt.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -75,7 +115,7 @@ export default function ChatPage() {
     [],
   );
 
-  const { messages, sendMessage, stop, status, error } = useChat({
+  const { messages, sendMessage, stop, status, error } = useChat<ChatUIMessage>({
     transport,
   });
 
@@ -102,10 +142,8 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, status, showThinkingIndicator]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const trimmed = input.trim();
+  const submitPrompt = (value: string) => {
+    const trimmed = value.trim();
     if (!trimmed || isGenerating) {
       return;
     }
@@ -113,6 +151,11 @@ export default function ChatPage() {
     sendMessage({ text: trimmed });
     setInput("");
     shouldAutoScrollRef.current = true;
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    submitPrompt(input);
   };
 
   return (
@@ -123,7 +166,7 @@ export default function ChatPage() {
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Streaming AI Chat</h1>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                Week 4 FE-06 — powered by Vercel AI SDK and Anthropic Claude.
+                FE-07 — tool calling with streamed input, custom audit cards, and mock server tools.
               </p>
             </div>
             <Link
@@ -147,9 +190,12 @@ export default function ChatPage() {
       >
         <div className="flex flex-1 flex-col gap-4">
           {messages.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-              Ask about React patterns, accessibility, TypeScript validation, or this capstone
-              project architecture.
+            <div className="space-y-4 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+              <p>
+                Try a suggested prompt below to invoke the <code>getSiteAudit</code> server tool,
+                or ask a general frontend question for a markdown streaming response.
+              </p>
+              <PromptChips disabled={isGenerating} onSelect={submitPrompt} />
             </div>
           ) : (
             messages.map((message) => <MessageBubble key={message.id} message={message} />)
@@ -166,8 +212,15 @@ export default function ChatPage() {
           className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-4 sm:px-6"
           aria-label="Send a chat message"
         >
+          {messages.length > 0 ? (
+            <PromptChips disabled={isGenerating} onSelect={submitPrompt} />
+          ) : null}
+
           {error ? (
-            <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+            <p
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+            >
               {error.message}
             </p>
           ) : null}
@@ -181,7 +234,7 @@ export default function ChatPage() {
               value={input}
               onChange={(event) => setInput(event.target.value)}
               rows={3}
-              placeholder="Ask the assistant anything about frontend development…"
+              placeholder="Ask a question or run: Run SEO Audit for flyrank.ai"
               disabled={isGenerating}
               className="min-h-[88px] flex-1 resize-y rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-900"
             />

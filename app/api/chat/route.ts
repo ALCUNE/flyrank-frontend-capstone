@@ -3,9 +3,12 @@ import {
   createUIMessageStreamResponse,
   type UIMessage,
 } from "ai";
-import { streamMockMarkdownResponse } from "@/lib/mock-chat-stream";
+import { streamMockChatResponse } from "@/lib/mock-chat-stream";
+import { getSiteAudit } from "@/lib/tools/get-site-audit";
 
 export const runtime = "nodejs";
+
+export { getSiteAudit };
 
 export async function POST(request: Request) {
   try {
@@ -18,9 +21,10 @@ export async function POST(request: Request) {
     const stream = createUIMessageStream({
       originalMessages: body.messages,
       execute: async ({ writer }) => {
-        await streamMockMarkdownResponse({
+        await streamMockChatResponse({
           writer,
           abortSignal: request.signal,
+          messages: body.messages ?? [],
         });
       },
     });
