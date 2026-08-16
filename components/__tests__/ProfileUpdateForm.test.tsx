@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -60,7 +61,7 @@ describe("ProfileUpdateForm validation helpers", () => {
 describe("ProfileUpdateForm", () => {
   it("renders required fields and blocks invalid submission", async () => {
     const user = userEvent.setup();
-    const onSubmit = jest.fn();
+    const onSubmit = vi.fn();
 
     render(
       <ProfileUpdateForm
@@ -77,7 +78,7 @@ describe("ProfileUpdateForm", () => {
 
   it("submits valid data and shows a success message", async () => {
     const user = userEvent.setup();
-    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
 
     render(
       <ProfileUpdateForm
@@ -105,7 +106,7 @@ describe("ProfileUpdateForm", () => {
     const user = userEvent.setup();
     let resolveSubmit: () => void = () => undefined;
 
-    const onSubmit = jest.fn(
+    const onSubmit = vi.fn(
       () =>
         new Promise<void>((resolve) => {
           resolveSubmit = resolve;
