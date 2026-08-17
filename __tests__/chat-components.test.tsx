@@ -75,11 +75,18 @@ function makeUseChatReturn(overrides: Record<string, unknown> = {}) {
   };
 }
 
+// Double-cast through unknown: our minimal mock shape doesn't satisfy the full
+// UseChatHelpers interface (the real type has `id`, `setMessages`, etc. added
+// in newer SDK versions that we don't need to stub for these tests).
+type LooseChatReturn = ReturnType<typeof useChat>;
+
+function asChat(v: ReturnType<typeof makeUseChatReturn>): LooseChatReturn {
+  return v as unknown as LooseChatReturn;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  // Provide a safe default so any render that doesn't configure useChat won't
-  // throw "Cannot read properties of undefined".
-  vi.mocked(useChat).mockReturnValue(makeUseChatReturn() as ReturnType<typeof useChat>);
+  vi.mocked(useChat).mockReturnValue(asChat(makeUseChatReturn()));
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,7 +108,7 @@ describe('ChatPage – message text rendering', () => {
             parts: [{ type: 'text', text: 'Hi there — how can I help?' }],
           },
         ],
-      }) as ReturnType<typeof useChat>,
+      }) as unknown as ReturnType<typeof useChat>,
     );
 
     render(<ChatPage />);
@@ -133,7 +140,7 @@ describe('ChatPage – thinking indicator', () => {
           },
         ],
         status: 'submitted',
-      }) as ReturnType<typeof useChat>,
+      }) as unknown as ReturnType<typeof useChat>,
     );
 
     render(<ChatPage />);
@@ -145,7 +152,7 @@ describe('ChatPage – thinking indicator', () => {
 
   it('does not render the thinking indicator when status is "idle"', () => {
     vi.mocked(useChat).mockReturnValue(
-      makeUseChatReturn({ status: 'idle' }) as ReturnType<typeof useChat>,
+      makeUseChatReturn({ status: 'idle' }) as unknown as ReturnType<typeof useChat>,
     );
 
     render(<ChatPage />);
@@ -265,7 +272,7 @@ describe('ChatPage – form submission', () => {
   it('calls sendMessage with trimmed input and clears the textarea after submit', async () => {
     const sendMessage = vi.fn();
     vi.mocked(useChat).mockReturnValue(
-      makeUseChatReturn({ sendMessage }) as ReturnType<typeof useChat>,
+      makeUseChatReturn({ sendMessage }) as unknown as ReturnType<typeof useChat>,
     );
 
     const user = userEvent.setup();
