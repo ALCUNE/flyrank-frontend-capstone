@@ -157,12 +157,31 @@ export default function ChatPage() {
                 FE-08 — error recovery, onboarding, and mobile-safe streaming layout.
               </p>
             </div>
-            <Link
-              href="/"
-              className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-300"
-            >
-              Back to Home
-            </Link>
+            <nav className="flex flex-wrap gap-2" aria-label="Page navigation">
+              <Link
+                href="/3d"
+                className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition hover:border-violet-400 hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:border-violet-500 dark:hover:bg-violet-900/40"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+                </svg>
+                3D Experience
+              </Link>
+              <Link
+                href="/"
+                className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-300"
+              >
+                Back to Home
+              </Link>
+            </nav>
           </div>
         </div>
       </header>

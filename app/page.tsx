@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Box, Sparkles } from "lucide-react";
 import { ProfileUpdateForm, type UserProfile } from "@/components/ProfileUpdateForm";
 
 const navLinks = [
@@ -8,6 +9,7 @@ const navLinks = [
   { href: "/profile", label: "Profile Settings" },
   { href: "/playground", label: "Playground" },
   { href: "/chat", label: "Chat" },
+  { href: "/3d", label: "3D Lab" },
   { href: "/api/health", label: "Health Check", external: true },
 ];
 
@@ -65,6 +67,66 @@ export default function Home() {
       </header>
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 py-10 sm:px-6 lg:px-8">
+
+        {/* ── 3D Lab feature card ─────────────────────────────────────────── */}
+        <Link
+          href="/3d"
+          className="group relative overflow-hidden rounded-2xl border border-violet-500/30 bg-gradient-to-br from-slate-900 via-[#0d0a1f] to-slate-900 p-6 shadow-lg transition hover:border-violet-400/60 hover:shadow-violet-500/10 hover:shadow-2xl sm:p-8"
+        >
+          {/* Ambient glow blob */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-10 -top-10 h-52 w-52 rounded-full bg-violet-600/20 blur-3xl transition duration-500 group-hover:bg-violet-500/30"
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-8 left-8 h-40 w-40 rounded-full bg-cyan-500/10 blur-2xl"
+          />
+
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            {/* Icon + text */}
+            <div className="flex items-start gap-4">
+              <span className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-violet-500/15 p-3 ring-1 ring-violet-500/30 transition duration-300 group-hover:bg-violet-500/25">
+                <Box className="h-7 w-7 text-violet-400" aria-hidden="true" />
+              </span>
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold tracking-tight text-white">
+                    Interactive 3D AI Core
+                  </h2>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-violet-300 ring-1 ring-violet-500/30">
+                    <Sparkles className="h-3 w-3" aria-hidden="true" />
+                    WebGL
+                  </span>
+                </div>
+                <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-400">
+                  Real-time Three.js scene with floating gem geometry, MeshDistortMaterial,
+                  contact shadows, and a glassmorphism control panel — drag to orbit, tweak
+                  distortion and speed live.
+                </p>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-violet-500/40 bg-violet-500/10 px-5 py-2.5 text-sm font-medium text-violet-300 transition duration-200 group-hover:border-violet-400 group-hover:bg-violet-500/20 group-hover:text-violet-200 sm:self-center">
+              Explore 3D Lab
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </div>
+        </Link>
+
+        {/* ── Architecture overview ──────────────────────────────────────── */}
         <section
           aria-labelledby="architecture-heading"
           className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8"
