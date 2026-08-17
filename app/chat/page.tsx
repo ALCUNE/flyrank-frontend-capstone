@@ -118,31 +118,50 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, status, showThinkingIndicator, error]);
 
+  // Keep the browser tab title in sync for this client-only route.
+  useEffect(() => {
+    const previous = document.title;
+    document.title = "Streaming Chat | FlyRank AI";
+    return () => {
+      document.title = previous;
+    };
+  }, []);
+
   const handleRetry = useCallback(() => {
     clearError();
-    void regenerate();
+    regenerate().catch((err: unknown) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[chat] regenerate failed:", err);
+      }
+    });
     shouldAutoScrollRef.current = true;
   }, [clearError, regenerate]);
 
-  const submitPrompt = (value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed || isGenerating) {
-      return;
-    }
+  const submitPrompt = useCallback(
+    (value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed || isGenerating) {
+        return;
+      }
 
-    if (error) {
-      clearError();
-    }
+      if (error) {
+        clearError();
+      }
 
-    sendMessage({ text: trimmed });
-    setInput("");
-    shouldAutoScrollRef.current = true;
-  };
+      sendMessage({ text: trimmed });
+      setInput("");
+      shouldAutoScrollRef.current = true;
+    },
+    [sendMessage, isGenerating, error, clearError],
+  );
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    submitPrompt(input);
-  };
+  const handleSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      submitPrompt(input);
+    },
+    [submitPrompt, input],
+  );
 
   return (
     <div className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">

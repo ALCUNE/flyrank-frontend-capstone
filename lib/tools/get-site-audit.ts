@@ -27,6 +27,25 @@ export type SiteAuditResult = {
   auditedAt: string;
 };
 
+// Runtime schema for validating unknown tool output before rendering.
+export const siteAuditResultSchema = z.object({
+  url: z.string(),
+  status: z.enum(["healthy", "warning", "critical"]),
+  scores: z.object({
+    seo: z.number(),
+    performance: z.number(),
+    accessibility: z.number(),
+  }),
+  metrics: z.object({
+    pageSizeKb: z.number(),
+    loadTimeMs: z.number(),
+    brokenLinks: z.number(),
+    mobileFriendly: z.boolean(),
+  }),
+  recommendations: z.array(z.string()),
+  auditedAt: z.string(),
+});
+
 function normalizeUrl(url: string): string {
   const trimmed = url.trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
   return trimmed.toLowerCase();
@@ -43,7 +62,31 @@ function hashString(value: string): number {
   return Math.abs(hash);
 }
 
-export async function executeSiteAudit(input: SiteAuditInput): Promise<SiteAuditResult> {
+// Abort-aware delay used during the simulated audit computation phase.
+function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+
+    const timeoutId = setTimeout(resolve, ms);
+
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timeoutId);
+        reject(new DOMException("Aborted", "AbortError"));
+      },
+      { once: true },
+    );
+  });
+}
+
+export async function executeSiteAudit(
+  input: SiteAuditInput,
+  signal?: AbortSignal,
+): Promise<SiteAuditResult> {
   const { url } = siteAuditInputSchema.parse(input);
   const normalized = normalizeUrl(url);
 
@@ -51,7 +94,7 @@ export async function executeSiteAudit(input: SiteAuditInput): Promise<SiteAudit
     throw new Error(`Unable to reach "${url}". The host did not respond to audit probes.`);
   }
 
-  await new Promise((resolve) => setTimeout(resolve, 650));
+  await abortableDelay(650, signal);
 
   const seed = hashString(normalized);
   const seo = 68 + (seed % 28);
@@ -85,7 +128,9 @@ export const getSiteAudit = tool({
   description:
     "Runs an SEO, performance, and accessibility audit for a public website URL.",
   inputSchema: siteAuditInputSchema,
-  execute: executeSiteAudit,
+  // Use an explicit wrapper so the optional `signal` param doesn't conflict
+  // with the AI SDK's tool execute signature.
+  execute: (input) => executeSiteAudit(input),
 });
 
 export const chatTools = {

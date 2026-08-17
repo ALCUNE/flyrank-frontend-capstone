@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FlyRank AI — Frontend Capstone Project",
+  title: {
+    template: "%s | FlyRank AI",
+    default: "FlyRank AI — Frontend Capstone Project",
+  },
   description:
     "Frontend capstone project by Deniz Erdoğan featuring an accessible profile update form built with Next.js, React, TypeScript, and Tailwind CSS.",
 };

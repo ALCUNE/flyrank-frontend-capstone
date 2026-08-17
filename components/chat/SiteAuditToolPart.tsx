@@ -1,5 +1,5 @@
 import type { ChatUIMessage } from "@/lib/chat-types";
-import type { SiteAuditResult } from "@/lib/tools/get-site-audit";
+import { siteAuditResultSchema } from "@/lib/tools/get-site-audit";
 import { AuditResultCard } from "@/components/chat/AuditResultCard";
 import { ToolErrorState } from "@/components/chat/ToolErrorState";
 
@@ -80,8 +80,18 @@ export function SiteAuditToolPart({ part }: SiteAuditToolPartProps) {
           stateLabel="Executing"
         />
       );
-    case "output-available":
-      return <AuditResultCard result={part.output as SiteAuditResult} />;
+    case "output-available": {
+      const parsed = siteAuditResultSchema.safeParse(part.output);
+      if (!parsed.success) {
+        return (
+          <ToolErrorState
+            message="Audit result has an unexpected shape and cannot be displayed."
+            toolName="getSiteAudit"
+          />
+        );
+      }
+      return <AuditResultCard result={parsed.data} />;
+    }
     case "output-error":
       return (
         <ToolErrorState

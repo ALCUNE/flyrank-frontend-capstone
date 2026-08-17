@@ -294,5 +294,101 @@ describe('ChatPage – form submission', () => {
     // sendMessage must be called with the message payload
     expect(sendMessage).toHaveBeenCalledOnce();
     expect(sendMessage).toHaveBeenCalledWith({ text: 'Audit flyrank.ai for me' });
+
+    // After submission the textarea must be cleared so users can type again
+    expect(textarea).toHaveValue('');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 7 — ChatPage renders ChatErrorCard inline when useChat surfaces an error
+// ─────────────────────────────────────────────────────────────────────────────
+describe('ChatPage – error display in page', () => {
+  it('renders ChatErrorCard with the error message when an error is set', () => {
+    vi.mocked(useChat).mockReturnValue(
+      makeUseChatReturn({
+        messages: [
+          {
+            id: 'u1',
+            role: 'user',
+            parts: [{ type: 'text', text: 'Hello' }],
+          },
+        ],
+        error: new Error('Network request failed after 3 retries'),
+        status: 'idle',
+      }) as unknown as ReturnType<typeof useChat>,
+    );
+
+    render(<ChatPage />);
+
+    // ChatErrorCard exposes role="alert" so assistive technology is notified
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    // The raw error message text must be visible
+    expect(screen.getByText('Network request failed after 3 retries')).toBeInTheDocument();
+
+    // The retry button inside ChatErrorCard is reachable
+    expect(screen.getByRole('button', { name: 'Retry / Reload' })).toBeInTheDocument();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 8 — Stop button visible during "streaming"; thinking indicator hidden
+// ─────────────────────────────────────────────────────────────────────────────
+describe('ChatPage – streaming status indicators', () => {
+  it('shows Stop button and hides thinking indicator when status is "streaming"', () => {
+    vi.mocked(useChat).mockReturnValue(
+      makeUseChatReturn({
+        messages: [
+          {
+            id: 'u1',
+            role: 'user',
+            parts: [{ type: 'text', text: 'Tell me about React.' }],
+          },
+        ],
+        status: 'streaming',
+      }) as unknown as ReturnType<typeof useChat>,
+    );
+
+    render(<ChatPage />);
+
+    // Stop button must be rendered while a response is streaming
+    expect(
+      screen.getByRole('button', { name: 'Stop generating response' }),
+    ).toBeInTheDocument();
+
+    // The thinking indicator is only rendered for "submitted" (pre-first-token),
+    // not for "streaming" (tokens already arriving) — no false loading state.
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 9 — clearError is called before sendMessage when a prior error exists
+// ─────────────────────────────────────────────────────────────────────────────
+describe('ChatPage – error cleared on new submission', () => {
+  it('calls clearError before sendMessage when a previous error is active', async () => {
+    const sendMessage = vi.fn();
+    const clearError = vi.fn();
+
+    vi.mocked(useChat).mockReturnValue(
+      makeUseChatReturn({
+        sendMessage,
+        clearError,
+        error: new Error('Previous stream failed'),
+        status: 'idle',
+      }) as unknown as ReturnType<typeof useChat>,
+    );
+
+    const user = userEvent.setup();
+    render(<ChatPage />);
+
+    const textarea = screen.getByRole('textbox', { name: /message/i });
+    await user.type(textarea, 'Follow-up question');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    // clearError must be called to dismiss the error card before the new request
+    expect(clearError).toHaveBeenCalledOnce();
+    expect(sendMessage).toHaveBeenCalledWith({ text: 'Follow-up question' });
   });
 });

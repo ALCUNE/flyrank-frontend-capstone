@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import SceneContainer from '@/components/3d/SceneContainer';
+import { WebGLErrorBoundary } from '@/components/3d/WebGLErrorBoundary';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,8 @@ interface ToggleSwitchProps {
 function ToggleRow({ id, checked, onChange, label }: ToggleSwitchProps) {
   return (
     <div className="flex items-center justify-between">
+      {/* The <label> provides a click target that activates the button; the
+          button's accessible name comes from the explicit aria-label below. */}
       <label htmlFor={id} className="cursor-pointer select-none text-sm text-white/70">
         {label}
       </label>
@@ -41,12 +44,12 @@ function ToggleRow({ id, checked, onChange, label }: ToggleSwitchProps) {
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={label}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-1 focus-visible:ring-offset-black/50 ${
           checked ? 'bg-violet-500' : 'bg-white/20'
         }`}
       >
-        <span aria-hidden="true" className="sr-only">{label}</span>
         <span
           className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg transition-transform duration-200 ${
             checked ? 'translate-x-5' : 'translate-x-0'
@@ -93,6 +96,76 @@ function SliderRow({ id, label, min, max, step, value, onChange, displayValue }:
   );
 }
 
+// Color presets use the radiogroup + radio pattern so screen readers correctly
+// announce mutual exclusivity and arrow-key navigation works between swatches.
+interface ColorPresetsProps {
+  color: string;
+  onChange: (value: string) => void;
+}
+
+function ColorPresets({ color, onChange }: ColorPresetsProps) {
+  const groupRef = useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent, index: number) => {
+      const buttons =
+        groupRef.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+      if (!buttons?.length) return;
+
+      let nextIndex: number | null = null;
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        nextIndex = (index + 1) % buttons.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        nextIndex = (index - 1 + buttons.length) % buttons.length;
+      }
+
+      if (nextIndex !== null) {
+        buttons[nextIndex].focus();
+        onChange(COLOR_PRESETS[nextIndex].value);
+      }
+    },
+    [onChange],
+  );
+
+  return (
+    <div className="mb-5">
+      <p id="color-group-label" className="mb-2.5 text-xs font-medium text-white/40">
+        Color
+      </p>
+      <div
+        ref={groupRef}
+        role="radiogroup"
+        aria-labelledby="color-group-label"
+        className="flex gap-2.5"
+      >
+        {COLOR_PRESETS.map((preset, index) => {
+          const active = color === preset.value;
+          return (
+            <button
+              key={preset.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              aria-label={preset.label}
+              tabIndex={active ? 0 : -1}
+              onClick={() => onChange(preset.value)}
+              onKeyDown={(e) => handleKeyDown(e, index)}
+              className={`h-8 w-8 rounded-full transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-black/50 ${preset.ring} ${preset.tw} ${
+                active
+                  ? 'scale-110 ring-2 shadow-lg'
+                  : 'opacity-55 hover:scale-105 hover:opacity-90'
+              }`}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ThreeDPage() {
@@ -101,6 +174,15 @@ export default function ThreeDPage() {
   const [distort, setDistort]       = useState<number>(DEFAULTS.distort);
   const [speed, setSpeed]           = useState<number>(DEFAULTS.speed);
   const [autoRotate, setAutoRotate] = useState<boolean>(DEFAULTS.autoRotate);
+
+  // Keep the browser tab title in sync for this client-only route.
+  useEffect(() => {
+    const previous = document.title;
+    document.title = '3D AI Core | FlyRank AI';
+    return () => {
+      document.title = previous;
+    };
+  }, []);
 
   const handleReset = useCallback(() => {
     setColor(DEFAULTS.color);
@@ -113,15 +195,17 @@ export default function ThreeDPage() {
   return (
     <div className="relative h-[100dvh] overflow-hidden bg-[#050816]">
 
-      {/* ── 3D Canvas (absolute fill) ─────────────────────────────────────── */}
+      {/* ── 3D Canvas (absolute fill) — wrapped in error boundary ─────────── */}
       <div className="absolute inset-0" aria-hidden="true">
-        <SceneContainer
-          color={color}
-          wireframe={wireframe}
-          distort={distort}
-          speed={speed}
-          autoRotate={autoRotate}
-        />
+        <WebGLErrorBoundary>
+          <SceneContainer
+            color={color}
+            wireframe={wireframe}
+            distort={distort}
+            speed={speed}
+            autoRotate={autoRotate}
+          />
+        </WebGLErrorBoundary>
       </div>
 
       {/* ── Subtle vignette edges ─────────────────────────────────────────── */}
@@ -184,29 +268,8 @@ export default function ThreeDPage() {
           AI Core Controls
         </h2>
 
-        {/* Color presets */}
-        <div className="mb-5">
-          <p className="mb-2.5 text-xs font-medium text-white/40">Color</p>
-          <div className="flex gap-2.5">
-            {COLOR_PRESETS.map((preset) => {
-              const active = color === preset.value;
-              return (
-                <button
-                  key={preset.value}
-                  type="button"
-                  aria-label={`${preset.label} color${active ? ' (active)' : ''}`}
-                  aria-pressed={active}
-                  onClick={() => setColor(preset.value)}
-                  className={`h-8 w-8 rounded-full transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-black/50 ${preset.ring} ${preset.tw} ${
-                    active
-                      ? 'scale-110 ring-2 shadow-lg'
-                      : 'opacity-55 hover:scale-105 hover:opacity-90'
-                  }`}
-                />
-              );
-            })}
-          </div>
-        </div>
+        {/* Color presets — radiogroup with roving tabindex */}
+        <ColorPresets color={color} onChange={setColor} />
 
         {/* Sliders */}
         <div className="mb-5 space-y-4">

@@ -138,58 +138,76 @@ export async function streamMockSiteAuditTool({
   url: string;
   forceError?: boolean;
 }): Promise<void> {
-  const toolCallId = generateId();
-  const input: SiteAuditInput = { url: forceError ? "fail.example.com" : url };
-
-  writer.write({ type: "start" });
-  writer.write({ type: "start-step" });
-
-  await streamTextContent({
-    writer,
-    abortSignal,
-    content: `I'll run **getSiteAudit** for \`${input.url}\` and stream the tool lifecycle back to the UI.`,
-  });
-
-  await streamToolInput({
-    writer,
-    abortSignal,
-    toolCallId,
-    input,
-  });
-
+  // Top-level abort handler mirrors the pattern in streamMockMarkdownResponse:
+  // any AbortError thrown from the inner stream helpers bubbles here and the
+  // function writes { type: "abort" } then returns cleanly.
   try {
-    const output = await executeSiteAudit(input);
-    writer.write({
-      type: "tool-output-available",
-      toolCallId,
-      output,
-    });
+    const toolCallId = generateId();
+    const input: SiteAuditInput = { url: forceError ? "fail.example.com" : url };
+
+    writer.write({ type: "start" });
+    writer.write({ type: "start-step" });
 
     await streamTextContent({
       writer,
       abortSignal,
-      content: `\n\nAudit complete. Overall status: **${output.status}**. Review the scorecard below for SEO, performance, and accessibility metrics.`,
+      content: `I'll run **getSiteAudit** for \`${input.url}\` and stream the tool lifecycle back to the UI.`,
     });
+
+    await streamToolInput({
+      writer,
+      abortSignal,
+      toolCallId,
+      input,
+    });
+
+    try {
+      // Pass the abort signal so the 650 ms simulated delay is also cancellable.
+      const output = await executeSiteAudit(input, abortSignal);
+
+      writer.write({
+        type: "tool-output-available",
+        toolCallId,
+        output,
+      });
+
+      await streamTextContent({
+        writer,
+        abortSignal,
+        content: `\n\nAudit complete. Overall status: **${output.status}**. Review the scorecard below for SEO, performance, and accessibility metrics.`,
+      });
+    } catch (toolError) {
+      // Re-throw AbortErrors so they reach the outer handler below.
+      if (toolError instanceof DOMException && toolError.name === "AbortError") {
+        throw toolError;
+      }
+
+      const errorText =
+        toolError instanceof Error ? toolError.message : "Site audit failed unexpectedly.";
+
+      writer.write({
+        type: "tool-output-error",
+        toolCallId,
+        errorText,
+      });
+
+      await streamTextContent({
+        writer,
+        abortSignal,
+        content:
+          "\n\nThe audit tool returned an error. You can retry with a different URL or inspect the failure details below.",
+      });
+    }
+
+    writer.write({ type: "finish-step" });
+    writer.write({ type: "finish", finishReason: "stop" });
   } catch (error) {
-    const errorText =
-      error instanceof Error ? error.message : "Site audit failed unexpectedly.";
-
-    writer.write({
-      type: "tool-output-error",
-      toolCallId,
-      errorText,
-    });
-
-    await streamTextContent({
-      writer,
-      abortSignal,
-      content:
-        "\n\nThe audit tool returned an error. You can retry with a different URL or inspect the failure details below.",
-    });
+    if (error instanceof DOMException && error.name === "AbortError") {
+      writer.write({ type: "abort" });
+      return;
+    }
+    throw error;
   }
-
-  writer.write({ type: "finish-step" });
-  writer.write({ type: "finish", finishReason: "stop" });
 }
 
 export async function streamMockMidStreamError({

@@ -11,6 +11,11 @@ import {
 } from '@react-three/drei';
 import * as THREE from 'three';
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const MIN_POLAR = Math.PI / 4;
+const MAX_POLAR = (Math.PI * 3) / 4;
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface InteractiveShapeProps {
@@ -110,8 +115,8 @@ function Scene({ color, wireframe, distort, speed, autoRotate }: InteractiveShap
         autoRotateSpeed={speed * 1.8}
         enableDamping
         dampingFactor={0.04}
-        minPolarAngle={Math.PI / 4}
-        maxPolarAngle={(Math.PI * 3) / 4}
+        minPolarAngle={MIN_POLAR}
+        maxPolarAngle={MAX_POLAR}
       />
     </>
   );

@@ -15,12 +15,14 @@ const navLinks = [
 
 async function handleProfileSubmit(profile: UserProfile) {
   await new Promise((resolve) => setTimeout(resolve, 800));
-  console.log("Profile updated:", {
-    fullName: profile.fullName,
-    email: profile.email,
-    hasPassword: Boolean(profile.password),
-    avatar: profile.avatar?.name ?? null,
-  });
+  if (process.env.NODE_ENV !== "production") {
+    console.log("Profile updated:", {
+      fullName: profile.fullName,
+      email: profile.email,
+      hasPassword: Boolean(profile.password),
+      avatar: profile.avatar?.name ?? null,
+    });
+  }
 }
 
 export default function Home() {

@@ -4,11 +4,8 @@ import {
   type UIMessage,
 } from "ai";
 import { streamMockChatResponse } from "@/lib/mock-chat-stream";
-import { getSiteAudit } from "@/lib/tools/get-site-audit";
 
 export const runtime = "nodejs";
-
-export { getSiteAudit };
 
 export async function POST(request: Request) {
   try {
