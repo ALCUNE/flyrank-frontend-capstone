@@ -160,7 +160,7 @@ export default function ChatPage() {
             <nav className="flex flex-wrap gap-2" aria-label="Page navigation">
               <Link
                 href="/3d"
-                className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition hover:border-violet-400 hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:border-violet-500 dark:hover:bg-violet-900/40"
+                className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition hover:border-violet-400 hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:border-violet-500 dark:hover:bg-violet-900/40"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -177,7 +177,7 @@ export default function ChatPage() {
               </Link>
               <Link
                 href="/"
-                className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-300"
+                className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-300"
               >
                 Back to Home
               </Link>
@@ -186,15 +186,17 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="mx-auto min-h-0 w-full max-w-4xl flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-6"
-        role="log"
-        aria-live="polite"
-        aria-relevant="additions text"
-        aria-label="Chat conversation"
-      >
+      <main className="flex min-h-0 flex-1 flex-col">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="mx-auto min-h-0 w-full max-w-4xl flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-6"
+          role="log"
+          aria-live="polite"
+          aria-atomic="false"
+          aria-relevant="additions text"
+          aria-label="Chat conversation"
+        >
         <div className="flex min-h-full flex-col gap-4">
           {messages.length === 0 ? (
             <ChatEmptyState disabled={isGenerating} onSelect={submitPrompt} />
@@ -236,7 +238,7 @@ export default function ChatPage() {
               <button
                 type="submit"
                 disabled={isGenerating || input.trim().length === 0}
-                className="inline-flex flex-1 items-center justify-center rounded-full bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex flex-1 items-center justify-center rounded-full bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Send
               </button>
@@ -246,7 +248,7 @@ export default function ChatPage() {
                   type="button"
                   onClick={() => stop()}
                   aria-label="Stop generating response"
-                  className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                  className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   Stop
                 </button>
@@ -255,6 +257,7 @@ export default function ChatPage() {
           </div>
         </form>
       </footer>
-    </div>
+    </main>
+  </div>
   );
 }
