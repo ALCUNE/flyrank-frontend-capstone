@@ -7,7 +7,6 @@ import {
   MeshDistortMaterial,
   OrbitControls,
   ContactShadows,
-  Environment,
 } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -70,9 +69,8 @@ function GemCore({ color, wireframe, distort, speed }: GemProps) {
             color={color}
             distort={distort}
             speed={speed * 2.5}
-            roughness={0.04}
-            metalness={0.88}
-            envMapIntensity={2}
+            roughness={0.05}
+            metalness={0.9}
           />
         </mesh>
       )}
@@ -87,12 +85,17 @@ function Scene({ color, wireframe, distort, speed, autoRotate }: InteractiveShap
     <>
       <SceneBackground />
 
-      {/* Lights */}
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[5, 6, 5]} intensity={1.6} castShadow />
-      {/* Accent fill light — tinted to match current color */}
+      {/* Self-contained lighting rig — no external HDR fetch required.
+          Three complementary sources give the gem a vibrant, glossy look:
+          a broad ambient fill, a strong key light from the top-right, a soft
+          fill from the opposite side tinted violet, plus the two dynamic point
+          lights that already tracked the accent color. */}
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[10, 10, 5]}  intensity={1.5} castShadow />
+      <directionalLight position={[-10, -10, -5]} intensity={0.5} color="#8b5cf6" />
+      {/* Accent fill lights — tinted to match current color */}
       <pointLight position={[-4, -3, -4]} intensity={0.8} color={color} />
-      <pointLight position={[4, -3, 4]} intensity={0.4} color="#06b6d4" />
+      <pointLight position={[4, -3, 4]}   intensity={0.4} color="#06b6d4" />
 
       <GemCore color={color} wireframe={wireframe} distort={distort} speed={speed} />
 
@@ -103,9 +106,6 @@ function Scene({ color, wireframe, distort, speed, autoRotate }: InteractiveShap
         far={5.5}
         color="#000000"
       />
-
-      {/* Realistic lighting via environment map */}
-      <Environment preset="city" />
 
       {/* Orbit with inertia damping — gives the "pointer tracking + inertia" feel */}
       <OrbitControls
